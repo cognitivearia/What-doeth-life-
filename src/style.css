@@ -1,0 +1,102 @@
+:root {
+  --off-white: #f5f2eb;
+  --charcoal: #2c2c2c;
+  --charcoal-soft: #3a3a3a;
+  --paper: #ebe6dc;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--off-white);
+  font-family: "Instrument Sans", system-ui, sans-serif;
+  color: var(--charcoal);
+}
+
+#scene {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+}
+
+#scene.is-dragging {
+  cursor: grabbing;
+}
+
+#scene.is-painting {
+  cursor: crosshair;
+}
+
+#hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.hint {
+  position: absolute;
+  left: 50%;
+  bottom: 8vh;
+  transform: translateX(-50%);
+  font-size: clamp(0.9rem, 2vw, 1.05rem);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--charcoal-soft);
+  opacity: 0.72;
+  text-align: center;
+  max-width: min(90vw, 28rem);
+  transition: opacity 0.45s ease, transform 0.45s ease;
+}
+
+.hint.is-fading {
+  opacity: 0;
+  transform: translateX(-50%) translateY(8px);
+}
+
+.palette {
+  position: absolute;
+  left: 50%;
+  bottom: 6vh;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 0.65rem;
+  padding: 0.55rem 0.7rem;
+  pointer-events: auto;
+  background: color-mix(in srgb, var(--off-white) 86%, white);
+  border: 1px solid color-mix(in srgb, var(--charcoal) 12%, transparent);
+}
+
+.palette.hidden {
+  display: none;
+}
+
+.swatch {
+  width: 1.55rem;
+  height: 1.55rem;
+  border: 1.5px solid color-mix(in srgb, var(--charcoal) 35%, transparent);
+  background: var(--c);
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.swatch:hover {
+  transform: translateY(-2px);
+}
+
+.swatch.active {
+  border-color: var(--charcoal);
+  outline: 1px solid var(--charcoal);
+  outline-offset: 2px;
+}

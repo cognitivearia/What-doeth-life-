@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>What doeth life</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="scene"></canvas>
+      <div id="hud">
+        <p id="hint" class="hint">Arrastra la línea para levantarla</p>
+        <div id="palette" class="palette hidden" aria-label="Paleta de colores">
+          <button class="swatch active" data-color="#2C2C2C" style="--c:#2C2C2C" title="Charcoal"></button>
+          <button class="swatch" data-color="#6B705C" style="--c:#6B705C" title="Sage"></button>
+          <button class="swatch" data-color="#A4161A" style="--c:#A4161A" title="Rojo"></button>
+          <button class="swatch" data-color="#1D3557" style="--c:#1D3557" title="Azul"></button>
+          <button class="swatch" data-color="#F5F2EB" style="--c:#F5F2EB" title="Borrar"></button>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
