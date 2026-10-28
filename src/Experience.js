@@ -151,9 +151,9 @@ export class Experience {
     this.characterRoot.visible = false
     this.scene.add(this.characterRoot)
 
-    this.painting = new Painting({
-      getColor: () => this.paintColor,
-    })
+    // Objeto mutable: la paleta escribe aquí y el pincel lee el mismo ref
+    this.brush = { color: CSS.charcoal }
+    this.painting = new Painting(this.brush)
   }
 
   _bindEvents() {
@@ -169,7 +169,9 @@ export class Experience {
       const select = (e) => {
         e.preventDefault()
         e.stopPropagation()
-        this.paintColor = btn.dataset.color
+        const color = btn.getAttribute('data-color') || CSS.charcoal
+        this.brush.color = color
+        this.paintColor = color
         this.paletteEl.querySelectorAll('.swatch').forEach((b) => b.classList.remove('active'))
         btn.classList.add('active')
       }
@@ -200,8 +202,8 @@ export class Experience {
         this.coinTouched = true
         this.canvas.classList.add('is-dragging')
         this.coinBody.wakeUp()
-        this.coinBody.velocity.setZero()
-        this.coinBody.angularVelocity.setZero()
+        this.coinBody.velocity.set(0, 0, 0)
+        this.coinBody.angularVelocity.set(0, 0, 0)
         this.coinBody.type = CANNON.Body.KINEMATIC
         this._setHint(
           this.slotRevealed
@@ -341,8 +343,8 @@ export class Experience {
   _startInsert() {
     this.phase = PHASE.INSERTING
     this.coinBody.type = CANNON.Body.KINEMATIC
-    this.coinBody.velocity.setZero()
-    this.coinBody.angularVelocity.setZero()
+    this.coinBody.velocity.set(0, 0, 0)
+    this.coinBody.angularVelocity.set(0, 0, 0)
     this._insertT = 0
     this._insertFrom = this.coinBody.position.clone()
     this._setHint('')
