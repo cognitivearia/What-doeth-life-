@@ -121,44 +121,34 @@ export class Experience {
   _createSlot() {
     this.slotGroup = new THREE.Group()
     this.slotGroup.visible = false
-    this.slotGroup.position.set(0, -0.85, 0)
+    this.slotGroup.position.set(0, -0.9, 0)
 
-    // Plataforma sutil + ranura oscura bien legible
-    const plate = new THREE.Mesh(
-      new THREE.BoxGeometry(1.6, 0.04, 0.7),
-      new THREE.MeshBasicMaterial({ color: 0xe4dfd4 }),
+    // Ranura tipo máquina: bloque + boca negra estrecha
+    const block = new THREE.Mesh(
+      new THREE.BoxGeometry(1.35, 0.28, 0.55),
+      new THREE.MeshBasicMaterial({ color: 0xe8e2d6 }),
     )
 
-    const recess = new THREE.Mesh(
-      new THREE.BoxGeometry(0.22, 0.03, 0.7),
-      new THREE.MeshBasicMaterial({ color: 0xd2ccc0 }),
-    )
-    recess.position.y = 0.02
-
-    const hole = new THREE.Mesh(
-      new THREE.BoxGeometry(0.07, 0.1, 0.72),
-      new THREE.MeshBasicMaterial({ color: COLORS.slot }),
-    )
-    hole.position.y = 0.04
-
-    const rimGeo = new THREE.BoxGeometry(0.14, 0.03, 0.76)
-    const rim = new THREE.LineSegments(
-      new THREE.EdgesGeometry(rimGeo),
+    const blockEdge = new THREE.LineSegments(
+      new THREE.EdgesGeometry(new THREE.BoxGeometry(1.35, 0.28, 0.55)),
       new THREE.LineBasicMaterial({ color: COLORS.charcoal }),
     )
-    rim.position.y = 0.06
 
-    // Pequeñas marcas laterales tipo “boca” de máquina
-    const markMat = new THREE.MeshBasicMaterial({ color: COLORS.charcoal })
-    const markL = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.02, 0.12), markMat)
-    markL.position.set(-0.2, 0.05, 0)
-    const markR = markL.clone()
-    markR.position.x = 0.2
+    const mouth = new THREE.Mesh(
+      new THREE.BoxGeometry(0.09, 0.2, 0.58),
+      new THREE.MeshBasicMaterial({ color: COLORS.slot }),
+    )
+    mouth.position.set(0, 0.02, 0)
 
-    this.slotGroup.add(plate, recess, hole, rim, markL, markR)
+    const mouthRim = new THREE.LineSegments(
+      new THREE.EdgesGeometry(new THREE.BoxGeometry(0.16, 0.22, 0.6)),
+      new THREE.LineBasicMaterial({ color: COLORS.charcoal }),
+    )
+
+    this.slotGroup.add(block, blockEdge, mouth, mouthRim)
     this.scene.add(this.slotGroup)
 
-    this.slotTarget = new THREE.Vector3(0, -0.65, 0)
+    this.slotTarget = new THREE.Vector3(0, -0.7, 0)
   }
 
   _createCharacter() {
@@ -170,8 +160,6 @@ export class Experience {
     this.scene.add(this.characterRoot)
 
     this.painting = new Painting({
-      canvas: character.paintCanvas,
-      texture: character.paintTexture,
       getColor: () => this.paintColor,
     })
   }
@@ -311,16 +299,17 @@ export class Experience {
 
       // Impulso leve al soltar (sensación de moneda)
       this.coinBody.velocity.set(
-        (Math.random() - 0.5) * 0.4,
-        Math.min(0.2, this.coinBody.position.y * 0.1),
-        (Math.random() - 0.5) * 0.15,
+        (Math.random() - 0.5) * 0.35,
+        Math.min(0.15, this.coinBody.position.y * 0.08),
+        (Math.random() - 0.5) * 0.12,
       )
       this.coinBody.angularVelocity.set(
-        (Math.random() - 0.5) * 2,
-        (Math.random() - 0.5) * 4,
-        (Math.random() - 0.5) * 2,
+        (Math.random() - 0.5) * 1.5,
+        (Math.random() - 0.5) * 3,
+        (Math.random() - 0.5) * 1.5,
       )
 
+      // Si ya está sobre la ranura al soltar, insertar; si no, la física la acercará
       this._tryInsert()
       return
     }
@@ -335,19 +324,21 @@ export class Experience {
   _revealSlot() {
     if (this.slotRevealed) return
     this.slotRevealed = true
+    this.slotReady = false
     this.slotGroup.visible = true
     this.slotGroup.scale.set(0.01, 0.01, 0.01)
     this._slotRevealT = 0
-    this._setHint('Inserta la moneda en la ranura')
+    this._setHint('Suéltala sobre la ranura de abajo')
   }
 
   _tryInsert() {
-    if (!this.slotRevealed || this.phase !== PHASE.COIN) return
+    // Solo tras revelar la ranura por completo (para que se vea el gesto)
+    if (!this.slotRevealed || !this.slotReady || this.phase !== PHASE.COIN) return
 
     const pos = this.coinBody.position
-    const nearX = Math.abs(pos.x - this.slotTarget.x) < 0.32
-    const nearY = pos.y < -0.35 && pos.y > -1.05
-    const nearZ = Math.abs(pos.z) < 0.4
+    const nearX = Math.abs(pos.x - this.slotTarget.x) < 0.38
+    const nearY = pos.y < -0.4 && pos.y > -1.2
+    const nearZ = Math.abs(pos.z) < 0.45
 
     if (nearX && nearY && nearZ) {
       this._startInsert()
@@ -446,11 +437,12 @@ export class Experience {
         this._updateInsert(dt)
       }
 
-      if (this.slotRevealed && this.slotGroup.scale.x < 1) {
+      if (this.slotRevealed && !this.slotReady) {
         this._slotRevealT = (this._slotRevealT || 0) + dt
-        const s = Math.min(1, this._slotRevealT / 0.4)
+        const s = Math.min(1, this._slotRevealT / 0.55)
         const e = 1 - Math.pow(1 - s, 3)
         this.slotGroup.scale.setScalar(e)
+        if (s >= 1) this.slotReady = true
       }
 
       this._syncCoin()
