@@ -87,8 +87,8 @@ body,
 }
 
 .swatch {
-  width: 1.55rem;
-  height: 1.55rem;
+  width: 1.85rem;
+  height: 1.85rem;
   border: 1.5px solid color-mix(in srgb, var(--charcoal) 35%, transparent);
   background: var(--c);
   cursor: pointer;
@@ -101,6 +101,7 @@ body,
 
 .swatch.active {
   border-color: var(--charcoal);
-  outline: 1px solid var(--charcoal);
-  outline-offset: 2px;
+  outline: 2px solid var(--charcoal);
+  outline-offset: 3px;
+  transform: translateY(-2px);
 }
