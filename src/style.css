@@ -48,7 +48,7 @@ body,
 .hint {
   position: absolute;
   left: 50%;
-  bottom: 8vh;
+  bottom: 10vh;
   transform: translateX(-50%);
   font-size: clamp(0.9rem, 2vw, 1.05rem);
   font-weight: 500;
@@ -65,10 +65,14 @@ body,
   transform: translateX(-50%) translateY(8px);
 }
 
+.hint.has-palette {
+  bottom: 14vh;
+}
+
 .palette {
   position: absolute;
   left: 50%;
-  bottom: 6vh;
+  bottom: 5vh;
   transform: translateX(-50%);
   display: flex;
   gap: 0.65rem;

@@ -57,8 +57,8 @@ export class Experience {
       0.1,
       100,
     )
-    this.camera.position.set(0, 0.35, 4.2)
-    this.camera.lookAt(0, 0.2, 0)
+    this.camera.position.set(0, 0.1, 4.4)
+    this.camera.lookAt(0, 0.05, 0)
   }
 
   _initPhysics() {
@@ -81,8 +81,8 @@ export class Experience {
 
   _createCoin() {
     // Cilindro delgado = moneda. Eje en X → de frente se ve como línea.
-    const radius = 0.55
-    const thickness = 0.028
+    const radius = 0.62
+    const thickness = 0.034
     const segments = 48
 
     const geo = new THREE.CylinderGeometry(radius, radius, thickness, segments)
@@ -93,59 +93,72 @@ export class Experience {
     this.coinMesh.name = 'coin'
     this.scene.add(this.coinMesh)
 
-    // Contorno sutil para reforzar la silueta de canto
     const edgeGeo = new THREE.EdgesGeometry(geo, 30)
     const edgeMat = new THREE.LineBasicMaterial({ color: COLORS.charcoal })
     this.coinMesh.add(new THREE.LineSegments(edgeGeo, edgeMat))
 
     const shape = new CANNON.Cylinder(radius, radius, thickness, segments)
-    // Cannon cylinder eje Y → rotamos igual que el mesh
     const quat = new CANNON.Quaternion()
+    // De canto, vertical: se lee como una línea negra
     quat.setFromEuler(0, 0, Math.PI / 2)
 
     this.coinBody = new CANNON.Body({
       mass: 0.8,
       shape,
-      linearDamping: 0.28,
-      angularDamping: 0.35,
-      material: new CANNON.Material({ friction: 0.4, restitution: 0.15 }),
+      linearDamping: 0.4,
+      angularDamping: 0.55,
+      material: new CANNON.Material({ friction: 0.55, restitution: 0.08 }),
     })
     this.coinBody.quaternion.copy(quat)
-    this.coinBody.position.set(0, 0.05, 0)
+    // Centro del vacío, quieta hasta el primer arrastre
+    this.coinBody.position.set(0, 0.15, 0)
+    this.coinBody.type = CANNON.Body.KINEMATIC
     this.world.addBody(this.coinBody)
-
-    // Marcar orientación inicial "de canto"
     this.coinRestQuat = this.coinBody.quaternion.clone()
+    this.coinTouched = false
   }
 
   _createSlot() {
     this.slotGroup = new THREE.Group()
     this.slotGroup.visible = false
-    this.slotGroup.position.set(0, -0.72, 0)
+    this.slotGroup.position.set(0, -0.85, 0)
 
-    // Ranura estrecha en el suelo/vacío
+    // Plataforma sutil + ranura oscura bien legible
     const plate = new THREE.Mesh(
-      new THREE.BoxGeometry(1.4, 0.06, 0.55),
-      new THREE.MeshBasicMaterial({ color: COLORS.paper }),
+      new THREE.BoxGeometry(1.6, 0.04, 0.7),
+      new THREE.MeshBasicMaterial({ color: 0xe4dfd4 }),
     )
-    plate.position.y = 0
+
+    const recess = new THREE.Mesh(
+      new THREE.BoxGeometry(0.22, 0.03, 0.7),
+      new THREE.MeshBasicMaterial({ color: 0xd2ccc0 }),
+    )
+    recess.position.y = 0.02
 
     const hole = new THREE.Mesh(
-      new THREE.BoxGeometry(0.08, 0.08, 0.62),
+      new THREE.BoxGeometry(0.07, 0.1, 0.72),
       new THREE.MeshBasicMaterial({ color: COLORS.slot }),
     )
-    hole.position.y = 0.02
+    hole.position.y = 0.04
 
+    const rimGeo = new THREE.BoxGeometry(0.14, 0.03, 0.76)
     const rim = new THREE.LineSegments(
-      new THREE.EdgesGeometry(new THREE.BoxGeometry(0.12, 0.02, 0.66)),
+      new THREE.EdgesGeometry(rimGeo),
       new THREE.LineBasicMaterial({ color: COLORS.charcoal }),
     )
-    rim.position.y = 0.05
+    rim.position.y = 0.06
 
-    this.slotGroup.add(plate, hole, rim)
+    // Pequeñas marcas laterales tipo “boca” de máquina
+    const markMat = new THREE.MeshBasicMaterial({ color: COLORS.charcoal })
+    const markL = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.02, 0.12), markMat)
+    markL.position.set(-0.2, 0.05, 0)
+    const markR = markL.clone()
+    markR.position.x = 0.2
+
+    this.slotGroup.add(plate, recess, hole, rim, markL, markR)
     this.scene.add(this.slotGroup)
 
-    this.slotTarget = new THREE.Vector3(0, -0.55, 0)
+    this.slotTarget = new THREE.Vector3(0, -0.65, 0)
   }
 
   _createCharacter() {
@@ -196,15 +209,22 @@ export class Experience {
     if (this.phase === PHASE.COIN) {
       this.raycaster.setFromCamera(this.pointer, this.camera)
       const hits = this.raycaster.intersectObject(this.coinMesh, true)
-      if (hits.length) {
+      // Hitbox holgada: también aceptar clic cerca del centro de la línea
+      const nearCenter =
+        Math.abs(this.pointer.x) < 0.12 && Math.abs(this.pointer.y) < 0.45
+      if (hits.length || (!this.coinTouched && nearCenter)) {
         this.isDraggingCoin = true
+        this.coinTouched = true
         this.canvas.classList.add('is-dragging')
         this.coinBody.wakeUp()
         this.coinBody.velocity.set(0, 0, 0)
         this.coinBody.angularVelocity.set(0, 0, 0)
-        // Mientras se arrastra: casi cinemático
         this.coinBody.type = CANNON.Body.KINEMATIC
-        this._setHint('Levántala y suéltala sobre la ranura')
+        this._setHint(
+          this.slotRevealed
+            ? 'Suéltala sobre la ranura'
+            : 'Levántala para revelar la ranura',
+        )
       }
       return
     }
@@ -234,16 +254,19 @@ export class Experience {
       this.dragPlane.constant = 0
       if (this.raycaster.ray.intersectPlane(this.dragPlane, this.dragPoint)) {
         const x = THREE.MathUtils.clamp(this.dragPoint.x, -1.6, 1.6)
-        const y = THREE.MathUtils.clamp(this.dragPoint.y, -0.75, 1.6)
+        const y = THREE.MathUtils.clamp(this.dragPoint.y, -0.75, 1.7)
         this.coinBody.position.set(x, y, 0)
 
-        // Mantener la moneda de canto, con leve inclinación al mover
-        const tilt = THREE.MathUtils.clamp(x * 0.35, -0.45, 0.45)
+        // Mientras se manipula: física de disco (rueda / se inclina)
+        const spin = (x - (this._lastDragX ?? x)) * 8
+        this._lastDragX = x
+        const lift = THREE.MathUtils.clamp((y + 0.2) / 1.4, 0, 1)
         const q = new CANNON.Quaternion()
-        q.setFromEuler(0, 0, Math.PI / 2 + tilt)
+        // De línea (canto) a moneda (cara) según altura
+        q.setFromEuler(lift * 1.15, spin, Math.PI / 2 + x * 0.25)
         this.coinBody.quaternion.copy(q)
 
-        if (y > 0.35) {
+        if (y > 0.4) {
           this.coinLifted = true
           this._revealSlot()
         }
@@ -322,9 +345,9 @@ export class Experience {
     if (!this.slotRevealed || this.phase !== PHASE.COIN) return
 
     const pos = this.coinBody.position
-    const nearX = Math.abs(pos.x - this.slotTarget.x) < 0.28
-    const nearY = pos.y < -0.25 && pos.y > -0.85
-    const nearZ = Math.abs(pos.z) < 0.35
+    const nearX = Math.abs(pos.x - this.slotTarget.x) < 0.32
+    const nearY = pos.y < -0.35 && pos.y > -1.05
+    const nearZ = Math.abs(pos.z) < 0.4
 
     if (nearX && nearY && nearZ) {
       this._startInsert()
@@ -348,15 +371,15 @@ export class Experience {
 
     const from = this._insertFrom
     const x = THREE.MathUtils.lerp(from.x, 0, ease)
-    const y = THREE.MathUtils.lerp(from.y, -0.72, ease)
+    const y = THREE.MathUtils.lerp(from.y, -0.85, ease)
     const z = THREE.MathUtils.lerp(from.z, 0, ease)
     this.coinBody.position.set(x, y, z)
 
-    // Se alinea y “cae” en la ranura
+    // Se alinea de canto y “cae” en la ranura
     const q = new CANNON.Quaternion()
     q.setFromEuler(0, 0, Math.PI / 2)
     this.coinBody.quaternion.copy(q)
-    this.coinMesh.scale.setScalar(1 - ease * 0.85)
+    this.coinMesh.scale.setScalar(1 - ease * 0.9)
 
     if (t >= 1) {
       this._enterPaintPhase()
@@ -375,7 +398,8 @@ export class Experience {
     this._charAppearT = 0
 
     this.paletteEl?.classList.remove('hidden')
-    this._setHint('Arrastra para rotar · pinta sobre la figura')
+    this.hintEl?.classList.add('has-palette')
+    this._setHint('Arrastra fuera para rotar · sobre la figura para pintar')
   }
 
   _setHint(text) {

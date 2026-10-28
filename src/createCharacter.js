@@ -25,7 +25,6 @@ export function createCharacter() {
   })
   const edgeMat = new THREE.LineBasicMaterial({
     color: COLORS.charcoal,
-    linewidth: 2,
   })
 
   const parts = []
@@ -37,10 +36,16 @@ export function createCharacter() {
     mesh.name = name
     mesh.userData.paintable = true
 
-    const edges = new THREE.EdgesGeometry(geo, 20)
+    // Aristas “bold”: dos pasadas de edges ligeramente escaladas
+    const edges = new THREE.EdgesGeometry(geo, 15)
     const lines = new THREE.LineSegments(edges, edgeMat)
     lines.raycast = () => {}
     mesh.add(lines)
+
+    const bold = new THREE.LineSegments(edges, edgeMat.clone())
+    bold.scale.setScalar(1.012)
+    bold.raycast = () => {}
+    mesh.add(bold)
 
     group.add(mesh)
     parts.push(mesh)
